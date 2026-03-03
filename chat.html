@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HCA Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-wrapper">
+
+      <!-- ── Left Panel: Document Management ── -->
+      <aside id="doc-panel">
+        <div class="panel-header">
+          <span class="panel-icon">&#128196;</span>
+          <h2>Document Management</h2>
+        </div>
+
+        <section class="panel-section">
+          <h3 class="section-label">Upload Document</h3>
+          <form id="upload-form">
+            <label class="file-label" for="file-input">
+              <span class="file-icon">&#128190;</span>
+              <span class="file-text">Choose a file&hellip;</span>
+            </label>
+            <input type="file" id="file-input" accept=".pdf,.txt,.docx" />
+            <button type="button" id="upload-btn">Upload</button>
+          </form>
+        </section>
+
+        <section class="panel-section">
+          <h3 class="section-label">Retrieval Method</h3>
+          <select id="retrieval-method">
+            <option value="semantic">Semantic Search</option>
+            <option value="tfidf">TF-IDF</option>
+          </select>
+        </section>
+
+        <section class="panel-section">
+          <h3 class="section-label">Uploaded Documents</h3>
+          <ul id="uploaded-docs">
+            <li class="doc-placeholder">No documents uploaded yet.</li>
+          </ul>
+        </section>
+      </aside>
+
+      <!-- ── Right Panel: AI Chat ── -->
+      <main id="chat-container">
+        <header class="chat-header">
+          <div class="chat-header-title">
+            <span class="chat-icon">&#129302;</span>
+            <div>
+              <h1>AI Chat</h1>
+              <span class="chat-status">Ready to help</span>
+            </div>
+          </div>
+        </header>
+
+        <div id="messages">
+          <div class="message bot-message">
+            <div class="message-avatar">AI</div>
+            <div class="message-bubble">
+              Hello! Let's chat!.
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-bar">
+          <input
+            type="text"
+            id="user-input"
+            placeholder="Type your message…"
+            autocomplete="off"
+          />
+          <button id="send-btn" type="button" aria-label="Send message">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </main>
+
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
