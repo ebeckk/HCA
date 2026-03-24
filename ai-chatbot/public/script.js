@@ -5,11 +5,17 @@ const retrievalDropdown = document.getElementById("retrieval-method");
 const uploadBtn = document.getElementById("upload-btn");
 const fileInput = document.getElementById("file-input");
 
+// If not on the chat page, stop here
+if (!inputField || !sendBtn || !messagesContainer) {
+  throw new Error("Chat elements not found — not on chat page.");
+}
+
 function getParticipantID() {
   const storageKey = "participantID";
   let participantID = localStorage.getItem(storageKey);
 
   if (!participantID) {
+    // Fallback: generate one if somehow they landed here without going through index
     participantID =
       window.crypto?.randomUUID?.() ||
       `participant-${Date.now()}-${Math.floor(Math.random() * 10000)}`;

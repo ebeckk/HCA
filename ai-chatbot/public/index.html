@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCA Chat</title>
+    <title>HCA Chat - Welcome</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,82 +11,135 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <style>
+      .welcome-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 2rem;
+        background: var(--bg-color, #f5f7fb);
+      }
+      .welcome-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+        padding: 3rem 2.5rem;
+        max-width: 480px;
+        width: 100%;
+        text-align: center;
+      }
+      .welcome-card .chat-icon {
+        font-size: 3rem;
+        display: block;
+        margin-bottom: 1rem;
+      }
+      .welcome-card h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1a73e8;
+        margin: 0 0 0.5rem;
+      }
+      .welcome-card p {
+        color: #555;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0 0 2rem;
+      }
+      .welcome-card .participant-label {
+        display: block;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 0.5rem;
+        text-align: left;
+      }
+      .welcome-card input[type="text"] {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #d0d7de;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        outline: none;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+      }
+      .welcome-card input[type="text"]:focus {
+        border-color: #1a73e8;
+      }
+      .welcome-card button {
+        margin-top: 1.25rem;
+        width: 100%;
+        padding: 0.85rem;
+        background: #1a73e8;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .welcome-card button:hover {
+        background: #1558c0;
+      }
+      .error-msg {
+        color: #d93025;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: none;
+      }
+    </style>
   </head>
   <body>
-    <div class="app-wrapper">
-      <aside id="doc-panel">
-        <div class="panel-header">
-          <span class="panel-icon">&#128196;</span>
-          <h2>Document Management</h2>
+    <div class="welcome-wrapper">
+      <div class="welcome-card">
+        <span class="chat-icon">&#129302;</span>
+        <h1>HCA AI Chatbot</h1>
+        <div>
+          <p>
+            Welcome to the HCA AI Chatbot study. This chatbot uses OpenAI to answer
+            your questions in real time. Your conversation and interaction events are
+            logged anonymously for research purposes. Enter your Participant ID below
+            to begin or resume your session.
+          </p>
         </div>
-
-        <section class="panel-section">
-          <h3 class="section-label">Upload Document</h3>
-          <form id="upload-form">
-            <label class="file-label" for="file-input">
-              <span class="file-icon">&#128190;</span>
-              <span class="file-text">Choose a file&hellip;</span>
-            </label>
-            <input type="file" id="file-input" accept=".pdf,.txt,.docx" />
-            <button type="button" id="upload-btn">Upload</button>
-          </form>
-        </section>
-
-        <section class="panel-section">
-          <h3 class="section-label">Retrieval Method</h3>
-          <select id="retrieval-method">
-            <option value="semantic">Semantic Search</option>
-            <option value="tfidf">TF-IDF</option>
-          </select>
-        </section>
-
-        <section class="panel-section">
-          <h3 class="section-label">Uploaded Documents</h3>
-          <ul id="uploaded-docs">
-            <li class="doc-placeholder">No documents uploaded yet.</li>
-          </ul>
-        </section>
-      </aside>
-
-      <main id="chat-container">
-        <header class="chat-header">
-          <div class="chat-header-title">
-            <span class="chat-icon">&#129302;</span>
-            <div>
-              <h1>AI Chat</h1>
-              <span class="chat-status">Ready to help</span>
-            </div>
-          </div>
-        </header>
-
-        <div id="messages">
-          <div class="message bot-message">
-            <div class="message-avatar">AI</div>
-            <div class="message-bubble">Hello! Let's chat!.</div>
-          </div>
-        </div>
-
-        <div class="chat-input-bar">
-          <input
-            type="text"
-            id="user-input"
-            placeholder="Type your message…"
-            autocomplete="off"
-          />
-          <button id="send-btn" type="button" aria-label="Send message">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              width="20"
-              height="20"
-            >
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-            </svg>
-          </button>
-        </div>
-      </main>
+        <label class="participant-label" for="participant-input">Participant ID</label>
+        <input
+          type="text"
+          id="participant-input"
+          placeholder="e.g. P001"
+          autocomplete="off"
+        />
+        <p class="error-msg" id="error-msg">Please enter a Participant ID.</p>
+        <button id="start-btn">Start Chatting</button>
+      </div>
     </div>
-    <script src="script.js"></script>
+    <script>
+      const startBtn = document.getElementById("start-btn");
+      const participantInput = document.getElementById("participant-input");
+      const errorMsg = document.getElementById("error-msg");
+
+      startBtn.addEventListener("click", () => {
+        const id = participantInput.value.trim();
+        if (!id) {
+          errorMsg.style.display = "block";
+          return;
+        }
+        errorMsg.style.display = "none";
+        localStorage.setItem("participantID", id);
+        window.location.href = "/chat.html";
+      });
+
+      participantInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") startBtn.click();
+      });
+
+      // Pre-fill if already set
+      const existing = localStorage.getItem("participantID");
+      if (existing) participantInput.value = existing;
+    </script>
   </body>
 </html>
