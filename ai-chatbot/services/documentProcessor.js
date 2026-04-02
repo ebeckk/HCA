@@ -56,6 +56,7 @@ class DocumentProcessor {
       const dataBuffer = await fs.readFile(filePath);
       const parser = new PDFParse({ data: dataBuffer });
       const result = await parser.getText();
+      await parser.destroy();
       return result.text;
     } catch (error) {
       console.error('Error extracting PDF text:', error);

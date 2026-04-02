@@ -11,7 +11,8 @@ const multer = require("multer");
 const fs = require("fs").promises;
 const documentProcessor = require("./services/documentProcessor");
 const embeddingService = require("./services/embeddingService");
-const tfidfService = require("./services/tfidfService");
+const retrievalService = require("./services/retrievalService");
+const confidenceCalculator = require("./services/confidenceCalculator");
 
 const upload = multer({ dest: "uploads/" });
 
@@ -36,8 +37,8 @@ async function connectToMongoDB() {
     await mongoose.connect(mongoUri);
     mongoReady = true;
     console.log("Connected to MongoDB.");
-    await tfidfService.rebuildIndex();
-    console.log("TF-IDF index rebuilt from stored documents.");
+    await retrievalService.initialize();
+    console.log("Retrieval service initialized.");
   } catch (error) {
     mongoReady = false;
     console.error("Failed to connect to MongoDB:", error.message);
@@ -62,10 +63,28 @@ function ensureMongoConnection(res) {
   return true;
 }
 
-async function generateReply(message, retrievalMethod) {
+function buildRagPrompt(userMessage, retrievedChunks) {
+  if (!retrievedChunks || retrievedChunks.length === 0) {
+    return userMessage;
+  }
+
+  const contextBlocks = retrievedChunks
+    .map((chunk, i) => {
+      const source = chunk.documentName || "Unknown";
+      const score = (chunk.relevanceScore || chunk.score || 0).toFixed(4);
+      return `[Source ${i + 1}: ${source} | Score: ${score}]\n${chunk.chunkText}`;
+    })
+    .join("\n\n");
+
+  return `Use the following retrieved context to answer the user's question. If the context is not relevant, answer from your general knowledge.\n\nContext:\n${contextBlocks}\n\nUser question: ${userMessage}`;
+}
+
+async function generateReply(message, retrievalMethod, retrievedChunks) {
   if (!openai) {
     throw new Error("OPENAI_API_KEY is not set.");
   }
+
+  const userContent = buildRagPrompt(message, retrievedChunks);
 
   const response = await openai.responses.create({
     model: openAiModel,
@@ -75,7 +94,7 @@ async function generateReply(message, retrievalMethod) {
         content: [
           {
             type: "input_text",
-            text: "You are a helpful chatbot. Answer clearly and concisely.",
+            text: "You are a helpful chatbot. Answer clearly and concisely based on the provided context when available.",
           },
         ],
       },
@@ -84,9 +103,7 @@ async function generateReply(message, retrievalMethod) {
         content: [
           {
             type: "input_text",
-            text: retrievalMethod
-              ? `Retrieval method selected: ${retrievalMethod}\n\nUser message: ${message}`
-              : message,
+            text: userContent,
           },
         ],
       },
@@ -121,17 +138,49 @@ app.post("/chat", async (req, res) => {
   }
 
   try {
-    const reply = await generateReply(message.trim(), retrievalMethod);
+    const method = retrievalMethod || "semantic";
 
+    // Retrieve relevant chunks using selected method
+    const retrievedChunks = await retrievalService.retrieve(message.trim(), {
+      method,
+      topK: 3,
+      minScore: method === "tfidf" ? 0 : 0.3,
+    });
+
+    // Generate reply with RAG context
+    const reply = await generateReply(message.trim(), method, retrievedChunks);
+
+    // Compute confidence metrics
+    const confidenceMetrics = confidenceCalculator.calculate({
+      retrievedDocs: retrievedChunks,
+      retrievalMethod: method,
+    });
+
+    // Store interaction with evidence
     const interaction = await Interaction.create({
       participantID: participantID.trim(),
       userInput: message.trim(),
       botResponse: reply,
+      retrievalMethod: method,
+      retrievedEvidence: retrievedChunks.map((chunk) => ({
+        documentId: chunk.documentId,
+        documentName: chunk.documentName,
+        chunkIndex: chunk.chunkIndex,
+        chunkText: chunk.chunkText,
+        relevanceScore: chunk.relevanceScore || chunk.score || 0,
+      })),
+      confidenceMetrics,
     });
 
     res.json({
       reply,
       interactionID: interaction._id,
+      retrievedEvidence: retrievedChunks.map((chunk) => ({
+        documentName: chunk.documentName,
+        chunkText: chunk.chunkText,
+        relevanceScore: chunk.relevanceScore || chunk.score || 0,
+      })),
+      confidenceMetrics,
     });
   } catch (error) {
     console.error("Error in /chat:", error.message);
@@ -221,27 +270,23 @@ app.post("/upload-document", upload.single("document"), async (req, res) => {
     });
 
     const processed = await documentProcessor.processDocument(req.file);
-    const chunkEmbeddings = await embeddingService.generateEmbeddings(
-      processed.chunks.map((chunk) => chunk.text)
-    );
+    const chunksWithEmbeddings = await embeddingService.generateEmbeddings(processed.chunks);
 
-    documentRecord.filename = req.file.originalname;
     documentRecord.text = processed.fullText;
     documentRecord.fileSize = processed.fileSize;
-    documentRecord.mimeType = req.file.mimetype;
     documentRecord.totalChunks = processed.totalChunks;
-    documentRecord.chunks = processed.chunks.map((chunk, index) => ({
-      chunkIndex: chunk.chunkIndex ?? index,
+    documentRecord.chunks = chunksWithEmbeddings.map((chunk) => ({
+      chunkIndex: chunk.chunkIndex,
       text: chunk.text,
       startChar: chunk.startChar,
       endChar: chunk.endChar,
-      embedding: chunkEmbeddings[index] || [],
+      embedding: chunk.embedding || [],
     }));
     documentRecord.processingStatus = "completed";
     documentRecord.processedAt = new Date();
     await documentRecord.save();
 
-    const tfidfStats = await tfidfService.rebuildIndex();
+    await retrievalService.rebuildIndex();
 
     res.status(201).json({
       status: "success",
@@ -252,7 +297,6 @@ app.post("/upload-document", upload.single("document"), async (req, res) => {
         processedAt: documentRecord.processedAt,
       },
       chunkCount: documentRecord.chunks.length,
-      tfidfIndex: tfidfStats,
     });
   } catch (error) {
     if (documentRecord) {

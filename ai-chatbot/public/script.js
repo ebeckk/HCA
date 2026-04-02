@@ -4,6 +4,9 @@ const messagesContainer = document.getElementById("messages");
 const retrievalDropdown = document.getElementById("retrieval-method");
 const uploadBtn = document.getElementById("upload-btn");
 const fileInput = document.getElementById("file-input");
+const ragPanel = document.getElementById("rag-panel");
+const evidenceList = document.getElementById("evidence-list");
+const confidenceBadge = document.getElementById("confidence-badge");
 
 // If not on the chat page, stop here
 if (!inputField || !sendBtn || !messagesContainer) {
@@ -15,7 +18,6 @@ function getParticipantID() {
   let participantID = localStorage.getItem(storageKey);
 
   if (!participantID) {
-    // Fallback: generate one if somehow they landed here without going through index
     participantID =
       window.crypto?.randomUUID?.() ||
       `participant-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -45,6 +47,46 @@ function appendMessage(text, sender) {
 
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function displayEvidence(retrievedEvidence, confidenceMetrics) {
+  if (!ragPanel || !evidenceList || !confidenceBadge) return;
+
+  if (!retrievedEvidence || retrievedEvidence.length === 0) {
+    ragPanel.classList.add("hidden");
+    return;
+  }
+
+  // Show confidence badge
+  if (confidenceMetrics) {
+    const pct = Math.round((confidenceMetrics.overallConfidence || 0) * 100);
+    confidenceBadge.textContent = `Confidence: ${pct}%`;
+    confidenceBadge.className = "confidence-badge " + (
+      pct >= 70 ? "confidence-high" :
+      pct >= 40 ? "confidence-mid" :
+      "confidence-low"
+    );
+  } else {
+    confidenceBadge.textContent = "";
+  }
+
+  // Populate evidence chunks
+  evidenceList.innerHTML = "";
+  retrievedEvidence.forEach((item, i) => {
+    const score = (item.relevanceScore || 0).toFixed(4);
+    const li = document.createElement("li");
+    li.className = "evidence-item";
+    li.innerHTML = `
+      <div class="evidence-meta">
+        <span class="evidence-source">${item.documentName || "Unknown"}</span>
+        <span class="evidence-score">Score: ${score}</span>
+      </div>
+      <div class="evidence-text">${item.chunkText.slice(0, 200)}${item.chunkText.length > 200 ? "…" : ""}</div>
+    `;
+    evidenceList.appendChild(li);
+  });
+
+  ragPanel.classList.remove("hidden");
 }
 
 async function logEvent(eventType, details = {}) {
@@ -122,6 +164,7 @@ async function sendMessage() {
     }
 
     appendMessage(data.reply, "bot");
+    displayEvidence(data.retrievedEvidence, data.confidenceMetrics);
 
     await logEvent("send_message", {
       elementName: "send-btn",
@@ -159,6 +202,14 @@ retrievalDropdown.addEventListener("change", () => {
   });
 });
 
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  const fileText = document.querySelector(".file-text");
+  if (fileText) {
+    fileText.textContent = file ? file.name : "Choose a file\u2026";
+  }
+});
+
 uploadBtn.addEventListener("click", async () => {
   const file = fileInput.files[0];
 
@@ -166,6 +217,9 @@ uploadBtn.addEventListener("click", async () => {
     alert("Choose a file first.");
     return;
   }
+
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = "Uploading…";
 
   const formData = new FormData();
   formData.append("document", file);
@@ -177,7 +231,6 @@ uploadBtn.addEventListener("click", async () => {
     });
 
     const data = await response.json();
-    console.log(data);
 
     if (!response.ok) {
       alert(data.error || "Upload failed.");
@@ -185,12 +238,17 @@ uploadBtn.addEventListener("click", async () => {
     }
 
     fileInput.value = "";
-    await loadDocuments();
+    const fileText = document.querySelector(".file-text");
+    if (fileText) fileText.textContent = "Choose a file\u2026";
 
+    await loadDocuments();
     logEvent("upload_click", { elementName: "upload-btn" });
   } catch (error) {
     console.error("Error uploading document:", error);
     alert("Upload failed. Check the console for details.");
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = "Upload";
   }
 });
 
