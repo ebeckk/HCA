@@ -6,6 +6,14 @@ const mongoose = require("mongoose");
 const OpenAI = require("openai");
 const Interaction = require("./models/Interaction");
 const EventLog = require("./models/EventLog");
+const Document = require("./models/Document");
+const multer = require("multer");
+const fs = require("fs").promises;
+const documentProcessor = require("./services/documentProcessor");
+const embeddingService = require("./services/embeddingService");
+const tfidfService = require("./services/tfidfService");
+
+const upload = multer({ dest: "uploads/" });
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,6 +36,8 @@ async function connectToMongoDB() {
     await mongoose.connect(mongoUri);
     mongoReady = true;
     console.log("Connected to MongoDB.");
+    await tfidfService.rebuildIndex();
+    console.log("TF-IDF index rebuilt from stored documents.");
   } catch (error) {
     mongoReady = false;
     console.error("Failed to connect to MongoDB:", error.message);
@@ -188,6 +198,97 @@ app.post("/history", async (req, res) => {
   } catch (error) {
     console.error("Error in /history:", error.message);
     res.status(500).json({ error: "Unable to load chat history." });
+  }
+});
+
+app.post("/upload-document", upload.single("document"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded." });
+  }
+
+  if (!ensureMongoConnection(res)) {
+    return;
+  }
+
+  let documentRecord = null;
+
+  try {
+    documentRecord = await Document.create({
+      filename: req.file.originalname,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      processingStatus: "processing",
+    });
+
+    const processed = await documentProcessor.processDocument(req.file);
+    const chunkEmbeddings = await embeddingService.generateEmbeddings(
+      processed.chunks.map((chunk) => chunk.text)
+    );
+
+    documentRecord.filename = req.file.originalname;
+    documentRecord.text = processed.fullText;
+    documentRecord.fileSize = processed.fileSize;
+    documentRecord.mimeType = req.file.mimetype;
+    documentRecord.totalChunks = processed.totalChunks;
+    documentRecord.chunks = processed.chunks.map((chunk, index) => ({
+      chunkIndex: chunk.chunkIndex ?? index,
+      text: chunk.text,
+      startChar: chunk.startChar,
+      endChar: chunk.endChar,
+      embedding: chunkEmbeddings[index] || [],
+    }));
+    documentRecord.processingStatus = "completed";
+    documentRecord.processedAt = new Date();
+    await documentRecord.save();
+
+    const tfidfStats = await tfidfService.rebuildIndex();
+
+    res.status(201).json({
+      status: "success",
+      document: {
+        id: documentRecord._id,
+        filename: documentRecord.filename,
+        processingStatus: documentRecord.processingStatus,
+        processedAt: documentRecord.processedAt,
+      },
+      chunkCount: documentRecord.chunks.length,
+      tfidfIndex: tfidfStats,
+    });
+  } catch (error) {
+    if (documentRecord) {
+      documentRecord.processingStatus = "failed";
+      await documentRecord.save().catch(() => {});
+    }
+
+    console.error("Error uploading document:", error.message);
+    res.status(500).json({ error: "Failed to process document" });
+  } finally {
+    if (req.file?.path) {
+      await fs.unlink(req.file.path).catch(() => {});
+    }
+  }
+});
+
+app.get("/documents", async (req, res) => {
+  if (!ensureMongoConnection(res)) {
+    return;
+  }
+
+  try {
+    const docs = await Document.find(
+      {},
+      {
+        _id: 1,
+        filename: 1,
+        processingStatus: 1,
+        processedAt: 1,
+      }
+    ).sort({ uploadedAt: -1 });
+
+    res.json(docs);
+  } catch (error) {
+    console.error("Error fetching documents:", error.message);
+    res.status(500).json({ error: "Failed to fetch documents" });
   }
 });
 

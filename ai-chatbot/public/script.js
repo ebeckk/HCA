@@ -159,19 +159,59 @@ retrievalDropdown.addEventListener("change", () => {
   });
 });
 
-uploadBtn.addEventListener("click", () => {
-  if (fileInput.files.length > 0) {
-    const selectedFile = fileInput.files[0].name;
-    console.log(`Selected file: ${selectedFile}`);
-    logEvent("upload_click", {
-      elementName: "upload-btn",
+uploadBtn.addEventListener("click", async () => {
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("Choose a file first.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("document", file);
+
+  try {
+    const response = await fetch("/upload-document", {
+      method: "POST",
+      body: formData,
     });
-  } else {
-    console.log("No file selected.");
-    logEvent("upload_click", {
-      elementName: "upload-btn",
-    });
+
+    const data = await response.json();
+    console.log(data);
+
+    if (!response.ok) {
+      alert(data.error || "Upload failed.");
+      return;
+    }
+
+    fileInput.value = "";
+    await loadDocuments();
+
+    logEvent("upload_click", { elementName: "upload-btn" });
+  } catch (error) {
+    console.error("Error uploading document:", error);
+    alert("Upload failed. Check the console for details.");
   }
 });
 
+async function loadDocuments() {
+  const response = await fetch("/documents");
+  const docs = await response.json();
+
+  const documentsList = document.getElementById("uploaded-docs");
+  documentsList.innerHTML = "";
+
+  if (docs.length === 0) {
+    documentsList.innerHTML = '<li class="doc-placeholder">No documents uploaded yet.</li>';
+    return;
+  }
+
+  docs.forEach((doc) => {
+    const li = document.createElement("li");
+    li.textContent = `${doc.filename} — ${doc.processingStatus}`;
+    documentsList.appendChild(li);
+  });
+}
+
 loadHistory();
+loadDocuments();
