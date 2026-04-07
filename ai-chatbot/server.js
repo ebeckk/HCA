@@ -79,12 +79,22 @@ function buildRagPrompt(userMessage, retrievedChunks) {
   return `Use the following retrieved context to answer the user's question. If the context is not relevant, answer from your general knowledge.\n\nContext:\n${contextBlocks}\n\nUser question: ${userMessage}`;
 }
 
-async function generateReply(message, retrievalMethod, retrievedChunks) {
+async function generateReply(message, retrievalMethod, retrievedChunks, conversationHistory) {
   if (!openai) {
     throw new Error("OPENAI_API_KEY is not set.");
   }
 
   const userContent = buildRagPrompt(message, retrievedChunks);
+
+  const historyMessages = (conversationHistory || []).map((turn) => ({
+    role: turn.role,
+    content: [
+      {
+        type: turn.role === "user" ? "input_text" : "output_text",
+        text: turn.content,
+      },
+    ],
+  }));
 
   const response = await openai.responses.create({
     model: openAiModel,
@@ -98,6 +108,7 @@ async function generateReply(message, retrievalMethod, retrievedChunks) {
           },
         ],
       },
+      ...historyMessages,
       {
         role: "user",
         content: [
@@ -123,7 +134,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/chat", async (req, res) => {
-  const { participantID, message, retrievalMethod } = req.body;
+  const { participantID, message, retrievalMethod, conversationHistory, systemID } = req.body;
 
   if (!requireParticipantID(participantID, res)) {
     return;
@@ -147,8 +158,8 @@ app.post("/chat", async (req, res) => {
       minScore: method === "tfidf" ? 0 : 0.3,
     });
 
-    // Generate reply with RAG context
-    const reply = await generateReply(message.trim(), method, retrievedChunks);
+    // Generate reply with RAG context and conversation history
+    const reply = await generateReply(message.trim(), method, retrievedChunks, conversationHistory);
 
     // Compute confidence metrics
     const confidenceMetrics = confidenceCalculator.calculate({
@@ -239,9 +250,12 @@ app.post("/history", async (req, res) => {
   }
 
   try {
-    const history = await Interaction.find({ participantID: participantID.trim() })
-      .sort({ timestamp: 1 })
-      .lean();
+    const history = (
+      await Interaction.find({ participantID: participantID.trim() })
+        .sort({ timestamp: -1 })
+        .limit(5)
+        .lean()
+    ).reverse();
 
     res.json({ history });
   } catch (error) {

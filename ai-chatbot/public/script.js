@@ -14,20 +14,26 @@ if (!inputField || !sendBtn || !messagesContainer) {
 }
 
 function getParticipantID() {
-  const storageKey = "participantID";
-  let participantID = localStorage.getItem(storageKey);
-
-  if (!participantID) {
-    participantID =
-      window.crypto?.randomUUID?.() ||
-      `participant-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    localStorage.setItem(storageKey, participantID);
+  const params = new URLSearchParams(window.location.search);
+  const fromURL = params.get("participantID");
+  if (fromURL) {
+    localStorage.setItem("participantID", fromURL);
+    return fromURL;
   }
-
-  return participantID;
+  const fromStorage = localStorage.getItem("participantID");
+  if (fromStorage) return fromStorage;
+  const generated =
+    window.crypto?.randomUUID?.() ||
+    `participant-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  localStorage.setItem("participantID", generated);
+  return generated;
 }
 
 const participantID = getParticipantID();
+const urlParams = new URLSearchParams(window.location.search);
+const systemID = parseInt(urlParams.get("systemID")) || 1;
+
+const conversationHistory = [];
 
 function appendMessage(text, sender) {
   const messageDiv = document.createElement("div");
@@ -129,6 +135,8 @@ async function loadHistory() {
     history.forEach((interaction) => {
       appendMessage(interaction.userInput, "user");
       appendMessage(interaction.botResponse, "bot");
+      conversationHistory.push({ role: "user", content: interaction.userInput });
+      conversationHistory.push({ role: "assistant", content: interaction.botResponse });
     });
   } catch (error) {
     console.error("Error loading history:", error);
@@ -152,8 +160,10 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         participantID,
+        systemID,
         message: userText,
         retrievalMethod: retrievalDropdown.value,
+        conversationHistory: conversationHistory.slice(-10),
       }),
     });
 
@@ -162,6 +172,9 @@ async function sendMessage() {
     if (!response.ok) {
       throw new Error(data.error || "Failed to send chat message.");
     }
+
+    conversationHistory.push({ role: "user", content: userText });
+    conversationHistory.push({ role: "assistant", content: data.reply });
 
     appendMessage(data.reply, "bot");
     displayEvidence(data.retrievedEvidence, data.confidenceMetrics);

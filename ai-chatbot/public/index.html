@@ -18,6 +18,7 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
+        width: 100%;
         padding: 2rem;
         background: var(--bg-color, #f5f7fb);
       }
@@ -52,7 +53,7 @@
         font-weight: 500;
         color: #333;
         margin-bottom: 0.5rem;
-        text-align: left;
+        text-align: center;
       }
       .welcome-card input[type="text"] {
         width: 100%;
@@ -100,9 +101,7 @@
         <h1>HCA AI Chatbot</h1>
         <div>
           <p>
-            Welcome to the HCA AI Chatbot study. This chatbot uses OpenAI to answer
-            your questions in real time. Your conversation and interaction events are
-            logged anonymously for research purposes. Enter your Participant ID below
+            Enter your Participant ID below
             to begin or resume your session.
           </p>
         </div>
@@ -130,7 +129,9 @@
         }
         errorMsg.style.display = "none";
         localStorage.setItem("participantID", id);
-        window.location.href = "/chat.html";
+        const systemID = parseInt(id.replace(/\D/g, "")) % 2 === 1 ? 1 : 2;
+        const chatPage = systemID === 1 ? "chat.html" : "chat2.html";
+        window.location.href = `/${chatPage}?participantID=${encodeURIComponent(id)}&systemID=${systemID}`;
       });
 
       participantInput.addEventListener("keydown", (e) => {
