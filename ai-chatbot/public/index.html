@@ -130,8 +130,7 @@
         errorMsg.style.display = "none";
         localStorage.setItem("participantID", id);
         const systemID = parseInt(id.replace(/\D/g, "")) % 2 === 1 ? 1 : 2;
-        const chatPage = systemID === 1 ? "chat.html" : "chat2.html";
-        window.location.href = `/${chatPage}?participantID=${encodeURIComponent(id)}&systemID=${systemID}`;
+        window.location.href = `/study-workflow.html?participantID=${encodeURIComponent(id)}&systemID=${systemID}`;
       });
 
       participantInput.addEventListener("keydown", (e) => {

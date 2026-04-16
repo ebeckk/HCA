@@ -355,3 +355,14 @@ connectToMongoDB().finally(() => {
     console.log(`Server running at http://localhost:${port}`);
   });
 });
+
+
+app.post('/redirect-to-survey', (req, res) => {
+  const { participantID } = req.body;
+
+  const qualtricsBaseUrl = 'https://usfca.qualtrics.com/jfe/form/SV_0x3jawuLQJoRk2i';
+
+  const surveyUrl = `${qualtricsBaseUrl}?participantID=${encodeURIComponent(participantID)}`;
+
+  res.send(surveyUrl);
+});

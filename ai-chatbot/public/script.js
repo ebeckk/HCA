@@ -1,18 +1,3 @@
-const inputField = document.getElementById("user-input");
-const sendBtn = document.getElementById("send-btn");
-const messagesContainer = document.getElementById("messages");
-const retrievalDropdown = document.getElementById("retrieval-method");
-const uploadBtn = document.getElementById("upload-btn");
-const fileInput = document.getElementById("file-input");
-const ragPanel = document.getElementById("rag-panel");
-const evidenceList = document.getElementById("evidence-list");
-const confidenceBadge = document.getElementById("confidence-badge");
-
-// If not on the chat page, stop here
-if (!inputField || !sendBtn || !messagesContainer) {
-  throw new Error("Chat elements not found — not on chat page.");
-}
-
 function getParticipantID() {
   const params = new URLSearchParams(window.location.search);
   const fromURL = params.get("participantID");
@@ -32,6 +17,75 @@ function getParticipantID() {
 const participantID = getParticipantID();
 const urlParams = new URLSearchParams(window.location.search);
 const systemID = parseInt(urlParams.get("systemID")) || 1;
+
+async function logEvent(eventType, details = {}) {
+  try {
+    await fetch("/log-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        participantID,
+        eventType,
+        elementName: details.elementName,
+      }),
+    });
+  } catch (error) {
+    console.error("Error logging event:", error);
+  }
+}
+
+const surveyBtn = document.getElementById("survey-btn");
+if (surveyBtn) {
+  function redirectToQualtrics() {
+    fetch("/redirect-to-survey", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participantID }),
+    })
+      .then((response) => response.text())
+      .then((url) => {
+        logEvent("redirect", { elementName: "survey-btn" });
+        window.location.href = url;
+      })
+      .catch((error) => {
+        console.error("Error redirecting to survey:", error);
+        alert("There was an error redirecting to the survey. Please try again.");
+      });
+  }
+
+  surveyBtn.addEventListener("click", redirectToQualtrics);
+
+  const taskBtn = document.getElementById("task-btn");
+  if (taskBtn) {
+    taskBtn.addEventListener("click", () => {
+      logEvent("workflow_step", { elementName: "task-btn" });
+      window.location.href = `/task.html?participantID=${encodeURIComponent(participantID)}&systemID=${systemID}`;
+    });
+  }
+
+  const prototypeBtn = document.getElementById("prototype-btn");
+  if (prototypeBtn) {
+    prototypeBtn.addEventListener("click", () => {
+      logEvent("workflow_step", { elementName: "prototype-btn" });
+      const chatPage = systemID === 2 ? "chat2.html" : "chat.html";
+      window.location.href = `/${chatPage}?participantID=${encodeURIComponent(participantID)}&systemID=${systemID}`;
+    });
+  }
+}
+
+const inputField = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+const messagesContainer = document.getElementById("messages");
+const retrievalDropdown = document.getElementById("retrieval-method");
+const uploadBtn = document.getElementById("upload-btn");
+const fileInput = document.getElementById("file-input");
+const ragPanel = document.getElementById("rag-panel");
+const evidenceList = document.getElementById("evidence-list");
+const confidenceBadge = document.getElementById("confidence-badge");
+
+if (!inputField || !sendBtn || !messagesContainer) {
+  void 0;
+} else {
 
 const conversationHistory = [];
 
@@ -93,22 +147,6 @@ function displayEvidence(retrievedEvidence, confidenceMetrics) {
   });
 
   ragPanel.classList.remove("hidden");
-}
-
-async function logEvent(eventType, details = {}) {
-  try {
-    await fetch("/log-event", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        participantID,
-        eventType,
-        elementName: details.elementName,
-      }),
-    });
-  } catch (error) {
-    console.error("Error logging event:", error);
-  }
 }
 
 async function loadHistory() {
@@ -286,3 +324,4 @@ async function loadDocuments() {
 
 loadHistory();
 loadDocuments();
+} // end chat page block
