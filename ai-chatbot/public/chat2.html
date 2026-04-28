@@ -272,23 +272,31 @@
     .agent-summary-body strong { font-weight: 700; }
 
     .recommendation-box {
-      background: var(--green-bg);
-      border: 1px solid var(--green-border);
+      background: #fffbeb;
+      border: 1.5px solid #f59e0b;
+      border-left: 5px solid #f59e0b;
       border-radius: 8px;
-      padding: 12px 14px;
-      margin-top: 10px;
+      padding: 14px 16px;
+      margin-top: 12px;
     }
 
     .recommendation-label {
       font-size: 11px;
       font-weight: 700;
-      color: #15803d;
+      color: #92400e;
       text-transform: uppercase;
       letter-spacing: .07em;
-      margin-bottom: 5px;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
-    .recommendation-text { font-size: 13px; color: #166534; line-height: 1.5; }
+    .recommendation-text { font-size: 13px; color: #78350f; line-height: 1.6; }
+    .recommendation-text p { margin-bottom: 5px; }
+    .recommendation-text ul, .recommendation-text ol { padding-left: 1.3em; margin-bottom: 5px; }
+    .recommendation-text li { margin-bottom: 3px; }
+    .recommendation-text strong { font-weight: 700; }
 
     /* What to do next bar */
     .next-steps-bar {
@@ -519,12 +527,29 @@
 
     /* ── Helpers ── */
 
+    function stripForChat(text) {
+      // Prefer the dedicated Chat: summary line the model generates
+      const chatMatch = text.match(/^\*\*Chat:\*\*\s*(.+)/m);
+      if (chatMatch) return chatMatch[1].trim();
+
+      // Fallback: strip all structured content and return first plain paragraph
+      const stripped = text
+        .replace(/(\|.+\|\r?\n\|[-| :]+\|\r?\n(?:\|.+\|\r?\n?)+)/g, '')
+        .replace(/\*{0,2}Next Steps?\*{0,2}:?\s*\n?([\s\S]*)$/i, '')
+        .replace(/^#{1,3}\s+.+$/gm, '')
+        .replace(/^[\*\-]\s+.+$/gm, '')
+        .replace(/^\d+\.\s+.+$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      return stripped.split('\n\n')[0].trim();
+    }
+
     function c2AppendMessage(text, sender) {
       const div = document.createElement('div');
       div.className = 'c2msg ' + (sender === 'user' ? 'user' : 'bot');
       const bubble = document.createElement('div');
       bubble.className = 'c2bubble';
-      bubble.innerHTML = sender === 'bot' ? marked.parse(text) : escapeHtml(text);
+      bubble.innerHTML = sender === 'bot' ? marked.parse(stripForChat(text)) : escapeHtml(text);
       div.appendChild(bubble);
       c2Messages.appendChild(div);
       c2Messages.scrollTop = c2Messages.scrollHeight;
@@ -613,7 +638,7 @@
       if (recommendation) {
         const box = document.createElement('div');
         box.className = 'recommendation-box';
-        box.innerHTML = `<div class="recommendation-label">Recommendation</div><div class="recommendation-text">${marked.parseInline(recommendation)}</div>`;
+        box.innerHTML = `<div class="recommendation-label">⭐ Recommendation</div><div class="recommendation-text">${marked.parse(recommendation)}</div>`;
         body.appendChild(box);
       }
 
@@ -658,39 +683,41 @@
         });
       }
 
-      // Extract Recommendation line
-      const recRe = /\*{0,2}Recommendation:?\*{0,2}\s*(.+)/i;
-      const recMatch = replyText.match(recRe);
-      const recommendation = recMatch ? recMatch[1].replace(/\*\*/g,'').trim() : null;
+      // Strip Next Steps, then strip tables — recommendation regex must run on table-free text
+      const textNoNextSteps = replyText.replace(/\*{0,2}Next Steps?\*{0,2}:?\s*\n?([\s\S]*)$/i, '').trim();
+      const textClean = textNoNextSteps.replace(/(\|.+\|\r?\n\|[-| :]+\|\r?\n(?:\|.+\|\r?\n?)+)/g, '').trim();
 
-      // Build clean summary text (strip tables, next steps, markdown headings)
-      const summaryRaw = replyText
-        .replace(tableRe, '')
-        .replace(/\*{0,2}Next Steps?\*{0,2}:?[\s\S]*$/i, '')
+      // Match ## Recommendation heading OR **Recommendation:** bold label, capture multi-line body
+      const recRe = /(?:^|\n)\s*(?:#{1,3}\s+|\*{0,2})Recommendation[^\n]*(?:\*{0,2}):?\s*\n([\s\S]+)/im;
+      const recMatch = textClean.match(recRe);
+      const recommendation = recMatch ? recMatch[1].trim() : null;
+
+      // Build clean summary text (strip recommendation block and Chat: line)
+      const summaryRaw = textClean
+        .replace(/(?:^|\n)\s*(?:#{1,3}\s+|\*{0,2})Recommendation[^\n]*(?:\*{0,2}):?\s*\n[\s\S]*$/im, '')
+        .replace(/^\*\*Chat:\*\*\s*.+\n?/m, '')
         .trim();
       const summaryHtml = summaryRaw.length > 20 ? marked.parse(summaryRaw) : null;
 
       if (tables.length === 0 && !recommendation && (!summaryHtml) && nextSteps.length === 0) return;
 
-      // Hide empty state
+      // Clear panel and show latest response only
       decisionEmpty.style.display = 'none';
-
-      const fragment = document.createDocumentFragment();
+      Array.from(decisionBody.children).forEach(child => {
+        if (child.id !== 'decision-empty') child.remove();
+      });
 
       // Tables
       tables.forEach((m, i) => {
         const { headers, dataRows } = parseMarkdownTable(m[0]);
         const label = tables.length > 1 ? `Comparison Table ${i + 1}` : 'Comparison Table';
-        fragment.appendChild(buildComparisonTable(headers, dataRows, label));
+        decisionBody.appendChild(buildComparisonTable(headers, dataRows, label));
       });
 
       // Summary + recommendation
       if (summaryHtml || recommendation) {
-        fragment.appendChild(buildAgentSummary(summaryHtml, recommendation));
+        decisionBody.appendChild(buildAgentSummary(summaryHtml, recommendation));
       }
-
-      // Prepend (newest on top)
-      decisionBody.insertBefore(fragment, decisionBody.firstChild);
 
       // Update next-steps bar
       if (nextSteps.length > 0) setNextSteps(nextSteps);
