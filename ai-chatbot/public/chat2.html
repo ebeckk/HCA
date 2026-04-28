@@ -1,12 +1,858 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCA Chat - Coming Soon</title>
-  </head>
-  <body>
-    <h1>Coming Soon</h1>
-    <p>System 2 is under construction.</p>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HCA Decision Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --navy: #1e3a5f;
+      --navy-light: #2d5282;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text: #1a202c;
+      --muted: #718096;
+      --border: #e2e8f0;
+      --bg: #f7f9fc;
+      --green-bg: #f0fdf4;
+      --green-border: #86efac;
+      --font: 'Roboto', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* === Layout === */
+    .split-layout {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* === Left: Chat Panel === */
+    .chat-panel {
+      width: 310px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-right: 1px solid var(--border);
+    }
+
+    .chat-panel-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 14px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    #chat2-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f8fafc;
+    }
+
+    #chat2-messages::-webkit-scrollbar { width: 4px; }
+    #chat2-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .c2msg { display: flex; flex-direction: column; max-width: 93%; }
+    .c2msg.user { align-self: flex-end; align-items: flex-end; }
+    .c2msg.bot  { align-self: flex-start; align-items: flex-start; }
+
+    .c2bubble {
+      padding: 9px 13px;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .c2msg.user .c2bubble {
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .c2msg.bot .c2bubble {
+      background: #f1f5f9;
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* basic markdown in bot bubbles */
+    .c2bubble h1,.c2bubble h2,.c2bubble h3 { font-size: 13px; font-weight: 700; margin: 8px 0 4px; color: var(--navy); }
+    .c2bubble strong { font-weight: 700; }
+    .c2bubble ul,.c2bubble ol { padding-left: 1.3em; margin: 4px 0; }
+    .c2bubble li { margin-bottom: 2px; }
+    .c2bubble p { margin: 4px 0; }
+    .c2bubble table { border-collapse: collapse; width: 100%; font-size: 12px; margin: 6px 0; }
+    .c2bubble th { background: var(--navy); color: #fff; padding: 5px 8px; text-align: left; }
+    .c2bubble td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+    .c2bubble tr:last-child td { border-bottom: none; }
+
+    .chat-input-area {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+
+    #chat2-input {
+      flex: 1;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-family: var(--font);
+      font-size: 13px;
+      outline: none;
+      background: var(--bg);
+      transition: border-color .2s;
+    }
+
+    #chat2-input:focus { border-color: var(--accent); background: #fff; }
+
+    #chat2-send {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background .2s;
+    }
+
+    #chat2-send:hover { background: var(--accent-hover); }
+
+    /* Typing indicator */
+    .typing-dots { display: flex; gap: 4px; padding: 3px 0; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite ease-in-out; }
+    .dot:nth-child(2) { animation-delay: .2s; }
+    .dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink {
+      0%,80%,100% { opacity: .3; transform: scale(1); }
+      40% { opacity: 1; transform: scale(1.25); }
+    }
+
+    /* === Right: Decision Panel === */
+    .decision-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      min-width: 0;
+    }
+
+    .decision-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .decision-header-title { font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+
+    #summary-btn {
+      padding: 6px 14px;
+      background: rgba(255,255,255,.15);
+      border: 1.5px solid rgba(255,255,255,.4);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 12px;
+      font-family: var(--font);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #summary-btn:hover { background: rgba(255,255,255,.25); }
+
+    .decision-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .decision-body::-webkit-scrollbar { width: 6px; }
+    .decision-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Empty state */
+    .decision-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      color: var(--muted);
+      text-align: center;
+      gap: 12px;
+      padding: 40px;
+    }
+    .decision-empty-icon { font-size: 3.5rem; opacity: .3; }
+
+    /* Decision content blocks */
+    .decision-block {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .decision-block-title {
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    /* Comparison table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .comparison-table th {
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .comparison-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table tr:nth-child(even) td { background: #f8fafc; }
+
+    /* Agent Summary */
+    .agent-summary-body {
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .agent-summary-body p { margin-bottom: 6px; }
+    .agent-summary-body ul { padding-left: 1.3em; margin-bottom: 6px; }
+    .agent-summary-body li { margin-bottom: 3px; }
+    .agent-summary-body strong { font-weight: 700; }
+
+    .recommendation-box {
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+
+    .recommendation-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #15803d;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 5px;
+    }
+
+    .recommendation-text { font-size: 13px; color: #166534; line-height: 1.5; }
+
+    /* What to do next bar */
+    .next-steps-bar {
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      min-height: 52px;
+    }
+
+    .next-steps-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .next-step-pill {
+      padding: 6px 14px;
+      background: #eff6ff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 20px;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .next-step-pill:hover { background: #dbeafe; border-color: var(--accent); }
+
+    .next-steps-placeholder { font-size: 12px; color: var(--muted); font-style: italic; }
+
+    /* === Decision Summary Modal === */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    .modal-card {
+      background: #fff;
+      border-radius: 12px;
+      width: 620px;
+      max-width: 95vw;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+
+    .modal-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 18px 24px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+    }
+
+    .modal-header h2 { font-size: 16px; font-weight: 700; }
+
+    .modal-close {
+      background: none; border: none;
+      color: #fff; font-size: 20px;
+      cursor: pointer; opacity: .7; line-height: 1;
+    }
+    .modal-close:hover { opacity: 1; }
+
+    .modal-body { padding: 24px; }
+
+    .modal-meta {
+      display: flex; gap: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .modal-meta-item { font-size: 13px; color: var(--muted); }
+    .modal-meta-item strong { color: var(--text); font-weight: 600; }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      background: #dcfce7;
+      color: #166534;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .modal-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 16px 0 10px;
+    }
+
+    .modal-actions {
+      display: flex; gap: 10px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .btn-dark {
+      padding: 10px 20px;
+      background: var(--navy);
+      color: #fff; border: none;
+      border-radius: 7px; font-family: var(--font);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-dark:hover { background: var(--navy-light); }
+
+    .btn-outline {
+      padding: 10px 20px;
+      background: #fff; color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 7px; font-family: var(--font);
+      font-size: 13px; cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-outline:hover { background: var(--bg); }
+
+    .btn-orange {
+      padding: 10px 20px;
+      background: #f59e0b; color: #fff; border: none;
+      border-radius: 7px; font-family: var(--font);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-orange:hover { background: #d97706; }
+  </style>
+</head>
+<body>
+  <div class="split-layout">
+
+    <!-- ── Left: Chat Panel ── -->
+    <div class="chat-panel">
+      <div class="chat-panel-header">Chat</div>
+
+      <div id="chat2-messages">
+        <div class="c2msg bot">
+          <div class="c2bubble">
+            Hello! I'm your Decision Assistant. Ask me to compare options, summarize a document, or help you make a decision — I'll organize key information in the panel on the right automatically.
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <input id="chat2-input" type="text" placeholder="Ask a question…" autocomplete="off" />
+        <button id="chat2-send" aria-label="Send">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Right: Decision Panel ── -->
+    <div class="decision-panel">
+      <div class="decision-header">
+        <span class="decision-header-title">Structured Decision Panel</span>
+        <button id="summary-btn">Decision Summary ▾</button>
+      </div>
+
+      <div class="decision-body" id="decision-body">
+        <div class="decision-empty" id="decision-empty">
+          <div class="decision-empty-icon">📋</div>
+          <p style="font-weight:600;color:#4a5568;font-size:15px">No structured data yet</p>
+          <p style="font-size:13px">Ask me to compare options or summarize a document — tables and key information will appear here automatically.</p>
+        </div>
+      </div>
+
+      <div class="next-steps-bar" id="next-steps-bar">
+        <span class="next-steps-label">What to do next:</span>
+        <span class="next-steps-placeholder" id="next-placeholder">Suggestions will appear after the first response.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Decision Summary Modal ── -->
+  <div class="modal-overlay hidden" id="summary-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Decision Summary</h2>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <p style="color:var(--muted);font-size:13px">No decisions recorded yet. Start a conversation to build your summary.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- script.js provides participantID, systemID, logEvent -->
+  <script src="script.js"></script>
+
+  <script>
+    /* ── Chat 2 — Decision Panel Logic ── */
+
+    const c2Input    = document.getElementById('chat2-input');
+    const c2SendBtn  = document.getElementById('chat2-send');
+    const c2Messages = document.getElementById('chat2-messages');
+    const decisionBody  = document.getElementById('decision-body');
+    const decisionEmpty = document.getElementById('decision-empty');
+    const nextStepsBar  = document.getElementById('next-steps-bar');
+    const summaryModal  = document.getElementById('summary-modal');
+    const modalBody     = document.getElementById('modal-body');
+    const summaryBtn    = document.getElementById('summary-btn');
+    const modalCloseBtn = document.getElementById('modal-close');
+
+    const conversationHistory = [];
+    const savedBlocks = []; // stored for Decision Summary modal
+
+    /* ── Helpers ── */
+
+    function c2AppendMessage(text, sender) {
+      const div = document.createElement('div');
+      div.className = 'c2msg ' + (sender === 'user' ? 'user' : 'bot');
+      const bubble = document.createElement('div');
+      bubble.className = 'c2bubble';
+      bubble.innerHTML = sender === 'bot' ? marked.parse(text) : escapeHtml(text);
+      div.appendChild(bubble);
+      c2Messages.appendChild(div);
+      c2Messages.scrollTop = c2Messages.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function showTyping() {
+      const div = document.createElement('div');
+      div.className = 'c2msg bot';
+      div.id = 'c2-typing';
+      div.innerHTML = '<div class="c2bubble"><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+      c2Messages.appendChild(div);
+      c2Messages.scrollTop = c2Messages.scrollHeight;
+    }
+
+    function hideTyping() {
+      const el = document.getElementById('c2-typing');
+      if (el) el.remove();
+    }
+
+    /* ── Parse markdown table string into headers + rows ── */
+    function parseMarkdownTable(tableStr) {
+      const lines = tableStr.trim().split('\n').filter(l => l.includes('|'));
+      const headers = lines[0].split('|').map(h => h.trim()).filter(Boolean);
+      const dataRows = lines.slice(2)
+        .map(l => l.split('|').map(c => c.trim()).filter(Boolean))
+        .filter(r => r.length > 0);
+      return { headers, dataRows };
+    }
+
+    /* ── Build comparison table element ── */
+    function buildComparisonTable(headers, dataRows, label) {
+      const block = document.createElement('div');
+      block.className = 'decision-block';
+
+      const title = document.createElement('div');
+      title.className = 'decision-block-title';
+      title.textContent = label || 'Comparison Table';
+      block.appendChild(title);
+
+      const table = document.createElement('table');
+      table.className = 'comparison-table';
+
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.innerHTML = marked.parseInline(h);
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      dataRows.forEach(cells => {
+        const tr = document.createElement('tr');
+        cells.forEach(cell => {
+          const td = document.createElement('td');
+          td.innerHTML = marked.parseInline(cell);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      block.appendChild(table);
+      return block;
+    }
+
+    /* ── Build agent summary element ── */
+    function buildAgentSummary(summaryHtml, recommendation) {
+      const block = document.createElement('div');
+      block.className = 'decision-block';
+
+      const title = document.createElement('div');
+      title.className = 'decision-block-title';
+      title.textContent = 'Agent Summary';
+      block.appendChild(title);
+
+      const body = document.createElement('div');
+      body.className = 'agent-summary-body';
+      if (summaryHtml) body.innerHTML = summaryHtml;
+
+      if (recommendation) {
+        const box = document.createElement('div');
+        box.className = 'recommendation-box';
+        box.innerHTML = `<div class="recommendation-label">Recommendation</div><div class="recommendation-text">${marked.parseInline(recommendation)}</div>`;
+        body.appendChild(box);
+      }
+
+      block.appendChild(body);
+      return block;
+    }
+
+    /* ── Update next-steps bar ── */
+    function setNextSteps(steps) {
+      nextStepsBar.querySelectorAll('.next-step-pill').forEach(p => p.remove());
+      const ph = document.getElementById('next-placeholder');
+      if (ph) ph.remove();
+
+      steps.slice(0, 3).forEach(step => {
+        const pill = document.createElement('button');
+        pill.className = 'next-step-pill';
+        pill.textContent = step;
+        pill.addEventListener('click', () => {
+          c2Input.value = step;
+          c2Input.focus();
+          sendC2Message();
+          logEvent('next_step_click', { elementName: 'next-step-pill' });
+        });
+        nextStepsBar.appendChild(pill);
+      });
+    }
+
+    /* ── Populate decision panel from bot reply ── */
+    function populateDecisionPanel(replyText) {
+      // Extract markdown tables
+      const tableRe = /(\|.+\|\r?\n\|[-| :]+\|\r?\n(?:\|.+\|\r?\n?)+)/g;
+      const tables = [...replyText.matchAll(tableRe)];
+
+      // Extract Next Steps section (always last in response)
+      const nextStepsRe = /\*{0,2}Next Steps?\*{0,2}:?\s*\n?([\s\S]*)$/i;
+      const nsMatch = replyText.match(nextStepsRe);
+      const nextSteps = [];
+      if (nsMatch) {
+        nsMatch[1].split('\n').forEach(line => {
+          const cleaned = line.replace(/^[\d\.\-\*\s]+/, '').replace(/\*\*/g, '').trim();
+          if (cleaned.length > 5) nextSteps.push(cleaned);
+        });
+      }
+
+      // Extract Recommendation line
+      const recRe = /\*{0,2}Recommendation:?\*{0,2}\s*(.+)/i;
+      const recMatch = replyText.match(recRe);
+      const recommendation = recMatch ? recMatch[1].replace(/\*\*/g,'').trim() : null;
+
+      // Build clean summary text (strip tables, next steps, markdown headings)
+      const summaryRaw = replyText
+        .replace(tableRe, '')
+        .replace(/\*{0,2}Next Steps?\*{0,2}:?[\s\S]*$/i, '')
+        .trim();
+      const summaryHtml = summaryRaw.length > 20 ? marked.parse(summaryRaw) : null;
+
+      if (tables.length === 0 && !recommendation && (!summaryHtml) && nextSteps.length === 0) return;
+
+      // Hide empty state
+      decisionEmpty.style.display = 'none';
+
+      const fragment = document.createDocumentFragment();
+
+      // Tables
+      tables.forEach((m, i) => {
+        const { headers, dataRows } = parseMarkdownTable(m[0]);
+        const label = tables.length > 1 ? `Comparison Table ${i + 1}` : 'Comparison Table';
+        fragment.appendChild(buildComparisonTable(headers, dataRows, label));
+      });
+
+      // Summary + recommendation
+      if (summaryHtml || recommendation) {
+        fragment.appendChild(buildAgentSummary(summaryHtml, recommendation));
+      }
+
+      // Prepend (newest on top)
+      decisionBody.insertBefore(fragment, decisionBody.firstChild);
+
+      // Update next-steps bar
+      if (nextSteps.length > 0) setNextSteps(nextSteps);
+
+      // Save for modal
+      savedBlocks.push({ tables, summaryHtml, recommendation });
+    }
+
+    /* ── Send message ── */
+    async function sendC2Message() {
+      const text = c2Input.value.trim();
+      if (!text) return;
+
+      c2AppendMessage(text, 'user');
+      c2Input.value = '';
+      showTyping();
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantID,
+            systemID: 2,
+            message: text,
+            retrievalMethod: 'semantic',
+            conversationHistory: conversationHistory.slice(-10),
+          }),
+        });
+
+        const data = await res.json();
+        hideTyping();
+
+        if (!res.ok) throw new Error(data.error || 'Server error');
+
+        conversationHistory.push({ role: 'user', content: text });
+        conversationHistory.push({ role: 'assistant', content: data.reply });
+
+        c2AppendMessage(data.reply, 'bot');
+        populateDecisionPanel(data.reply);
+
+        logEvent('send_message', { elementName: 'chat2-send' });
+      } catch (err) {
+        hideTyping();
+        console.error(err);
+        c2AppendMessage('Sorry, something went wrong. Please try again.', 'bot');
+      }
+    }
+
+    /* ── Load history ── */
+    async function loadC2History() {
+      try {
+        const res = await fetch('/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participantID }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const history = Array.isArray(data.history) ? data.history : [];
+        if (!history.length) return;
+
+        c2Messages.innerHTML = '';
+        history.forEach(item => {
+          c2AppendMessage(item.userInput, 'user');
+          c2AppendMessage(item.botResponse, 'bot');
+          conversationHistory.push({ role: 'user', content: item.userInput });
+          conversationHistory.push({ role: 'assistant', content: item.botResponse });
+          populateDecisionPanel(item.botResponse);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    /* ── Decision Summary Modal ── */
+    function openSummaryModal() {
+      logEvent('click', { elementName: 'summary-btn' });
+
+      if (savedBlocks.length === 0) {
+        modalBody.innerHTML = '<p style="color:var(--muted);font-size:13px">No decisions recorded yet. Start a conversation to build your summary.</p>';
+        summaryModal.classList.remove('hidden');
+        return;
+      }
+
+      const last = savedBlocks[savedBlocks.length - 1];
+      let html = '';
+
+      html += `<div class="modal-meta">
+        <div class="modal-meta-item"><strong>Participant:</strong> ${participantID}</div>
+        <div class="modal-meta-item"><strong>Exchanges:</strong> ${Math.floor(conversationHistory.length / 2)}</div>
+      </div>`;
+
+      if (last.tables && last.tables.length > 0) {
+        html += '<div class="modal-section-title">Key Comparison Points</div>';
+        last.tables.forEach(m => {
+          const { headers, dataRows } = parseMarkdownTable(m[0]);
+          html += '<table class="comparison-table" style="margin-bottom:16px">';
+          html += '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
+          html += '<tbody>' + dataRows.map(r =>
+            '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>'
+          ).join('') + '</tbody>';
+          html += '</table>';
+        });
+      }
+
+      if (last.recommendation) {
+        html += `<div class="recommendation-box">
+          <div class="recommendation-label">Recommendation</div>
+          <div class="recommendation-text">${escapeHtml(last.recommendation)}</div>
+        </div>`;
+      }
+
+      html += `<div class="modal-actions">
+        <button class="btn-dark" id="modal-pdf">Save as PDF</button>
+        <button class="btn-outline" id="modal-restart">Start Over</button>
+        <button class="btn-orange" id="modal-refine">Refine Decision</button>
+      </div>`;
+
+      modalBody.innerHTML = html;
+
+      document.getElementById('modal-pdf').addEventListener('click', () => window.print());
+
+      document.getElementById('modal-restart').addEventListener('click', () => {
+        logEvent('click', { elementName: 'start-over-btn' });
+        summaryModal.classList.add('hidden');
+        // Clear everything
+        c2Messages.innerHTML = '';
+        decisionBody.innerHTML = '';
+        decisionEmpty.style.display = '';
+        decisionBody.appendChild(decisionEmpty);
+        savedBlocks.length = 0;
+        conversationHistory.length = 0;
+        nextStepsBar.querySelectorAll('.next-step-pill').forEach(p => p.remove());
+        const ph = document.createElement('span');
+        ph.className = 'next-steps-placeholder';
+        ph.id = 'next-placeholder';
+        ph.textContent = 'Suggestions will appear after the first response.';
+        nextStepsBar.appendChild(ph);
+        c2AppendMessage("Hello! I'm your Decision Assistant. Ask me to compare options, summarize a document, or help you make a decision — I'll organize key information in the panel on the right automatically.", 'bot');
+      });
+
+      document.getElementById('modal-refine').addEventListener('click', () => {
+        logEvent('click', { elementName: 'refine-btn' });
+        summaryModal.classList.add('hidden');
+        c2Input.value = 'Help me refine my decision based on what we discussed.';
+        c2Input.focus();
+      });
+
+      summaryModal.classList.remove('hidden');
+    }
+
+    /* ── Event listeners ── */
+    c2SendBtn.addEventListener('click', sendC2Message);
+    c2Input.addEventListener('keydown', e => { if (e.key === 'Enter') sendC2Message(); });
+    c2Input.addEventListener('focus', () => logEvent('input_focus', { elementName: 'chat2-input' }));
+    c2SendBtn.addEventListener('mouseenter', () => logEvent('hover', { elementName: 'chat2-send' }));
+    summaryBtn.addEventListener('click', openSummaryModal);
+    modalCloseBtn.addEventListener('click', () => summaryModal.classList.add('hidden'));
+    summaryModal.addEventListener('click', e => { if (e.target === summaryModal) summaryModal.classList.add('hidden'); });
+
+    loadC2History();
+  </script>
+</body>
 </html>

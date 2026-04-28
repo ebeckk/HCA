@@ -79,12 +79,23 @@ function buildRagPrompt(userMessage, retrievedChunks) {
   return `Use the following retrieved context to answer the user's question. If the context is not relevant, answer from your general knowledge.\n\nContext:\n${contextBlocks}\n\nUser question: ${userMessage}`;
 }
 
-async function generateReply(message, retrievalMethod, retrievedChunks, conversationHistory) {
+const SYSTEM_PROMPTS = {
+  1: "You are a helpful chatbot. Answer clearly and concisely based on the provided context when available.",
+  2: `You are a decision-support AI assistant. Format every response to maximize clarity and decision-making readability:
+- When comparing multiple options, ALWAYS render the comparison as a proper markdown table with | pipe | syntax.
+- Use ## for section headers and **bold** for key terms, numbers, and important facts.
+- Group information into clearly labeled sections with headers.
+- End EVERY response with a section titled "**Next Steps:**" that lists exactly 2-3 numbered follow-up questions the user could ask, relevant to what was just discussed.
+Answer clearly and concisely based on the provided context when available.`,
+};
+
+async function generateReply(message, retrievalMethod, retrievedChunks, conversationHistory, systemID) {
   if (!openai) {
     throw new Error("OPENAI_API_KEY is not set.");
   }
 
   const userContent = buildRagPrompt(message, retrievedChunks);
+  const systemPrompt = SYSTEM_PROMPTS[parseInt(systemID)] || SYSTEM_PROMPTS[1];
 
   const historyMessages = (conversationHistory || []).map((turn) => ({
     role: turn.role,
@@ -98,25 +109,12 @@ async function generateReply(message, retrievalMethod, retrievedChunks, conversa
 
   const response = await openai.responses.create({
     model: openAiModel,
+    instructions: systemPrompt,
     input: [
-      {
-        role: "system",
-        content: [
-          {
-            type: "input_text",
-            text: "You are a helpful chatbot. Answer clearly and concisely based on the provided context when available.",
-          },
-        ],
-      },
       ...historyMessages,
       {
         role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: userContent,
-          },
-        ],
+        content: [{ type: "input_text", text: userContent }],
       },
     ],
   });
@@ -149,25 +147,22 @@ app.post("/chat", async (req, res) => {
   }
 
   try {
+    const parsedSystemID = parseInt(systemID) || 1;
     const method = retrievalMethod || "semantic";
 
-    // Retrieve relevant chunks using selected method
     const retrievedChunks = await retrievalService.retrieve(message.trim(), {
       method,
       topK: 3,
       minScore: method === "tfidf" ? 0 : 0.3,
     });
 
-    // Generate reply with RAG context and conversation history
-    const reply = await generateReply(message.trim(), method, retrievedChunks, conversationHistory);
-
-    // Compute confidence metrics
     const confidenceMetrics = confidenceCalculator.calculate({
       retrievedDocs: retrievedChunks,
       retrievalMethod: method,
     });
 
-    // Store interaction with evidence
+    const reply = await generateReply(message.trim(), method, retrievedChunks, conversationHistory, parsedSystemID);
+
     const interaction = await Interaction.create({
       participantID: participantID.trim(),
       userInput: message.trim(),
