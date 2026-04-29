@@ -219,7 +219,7 @@
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: hidden;
+      overflow: visible;
       box-shadow: 0 1px 4px rgba(0,0,0,.06);
     }
 
@@ -234,8 +234,16 @@
     }
 
     /* Comparison table */
+    .table-scroll-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .table-scroll-wrapper::-webkit-scrollbar { height: 4px; }
+    .table-scroll-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
     .comparison-table {
       width: 100%;
+      min-width: 400px;
       border-collapse: collapse;
       font-size: 13px;
     }
@@ -247,12 +255,15 @@
       text-align: left;
       font-weight: 600;
       font-size: 12px;
+      white-space: nowrap;
     }
 
     .comparison-table td {
       padding: 10px 14px;
       border-bottom: 1px solid var(--border);
       color: var(--text);
+      word-break: break-word;
+      white-space: normal;
     }
 
     .comparison-table tr:last-child td { border-bottom: none; }
@@ -480,7 +491,7 @@
         <div class="decision-empty" id="decision-empty">
           <div class="decision-empty-icon">📋</div>
           <p style="font-weight:600;color:#4a5568;font-size:15px">No structured data yet</p>
-          <p style="font-size:13px">Ask me to compare options or summarize a document — tables and key information will appear here automatically.</p>
+          <p style="font-size:13px">Ask me to compare options or summarize something — tables and key information will appear here automatically.</p>
         </div>
       </div>
 
@@ -617,7 +628,10 @@
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
-      block.appendChild(table);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-scroll-wrapper';
+      wrapper.appendChild(table);
+      block.appendChild(wrapper);
       return block;
     }
 
