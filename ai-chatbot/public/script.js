@@ -128,6 +128,41 @@ if (finishTaskBtn) {
   });
 }
 
+// Submit Final Decision 
+const submitDecisionBtn = document.getElementById("submit-decision-btn");
+if (submitDecisionBtn) {
+  submitDecisionBtn.addEventListener("click", () => {
+    const choice = (document.getElementById("decision-choice")?.value || "").trim();
+    const reasoning = (document.getElementById("decision-reasoning")?.value || "").trim();
+
+    if (!choice) {
+      alert("Please select a recommendation before submitting.");
+      return;
+    }
+
+    submitDecisionBtn.disabled = true;
+    submitDecisionBtn.textContent = "Saving…";
+
+    fetch("/save-decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participantID, decision: choice, reasoning }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        submitDecisionBtn.textContent = "Decision Saved ✓";
+        submitDecisionBtn.style.background = "#1e7e34";
+        logEvent("workflow_step", { elementName: "submit-decision-btn" });
+      })
+      .catch((err) => {
+        console.error("Error saving decision:", err);
+        submitDecisionBtn.disabled = false;
+        submitDecisionBtn.textContent = "Submit Decision";
+        alert("There was an error saving your decision. Please try again.");
+      });
+  });
+}
+
 const inputField = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-btn");
 const messagesContainer = document.getElementById("messages");

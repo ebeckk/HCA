@@ -355,6 +355,25 @@ connectToMongoDB().finally(() => {
 });
 
 
+app.post('/save-decision', async (req, res) => {
+  const { participantID, decision, reasoning } = req.body;
+
+  if (!requireParticipantID(participantID, res)) return;
+  if (!ensureMongoConnection(res)) return;
+
+  try {
+    await EventLog.create({
+      participantID: participantID.trim(),
+      eventType: 'final_decision',
+      elementName: JSON.stringify({ decision: (decision || '').trim(), reasoning: (reasoning || '').trim() }),
+    });
+    res.status(201).json({ success: true });
+  } catch (error) {
+    console.error('Error in /save-decision:', error.message);
+    res.status(500).json({ error: 'Unable to save decision.' });
+  }
+});
+
 app.post('/redirect-to-survey', (req, res) => {
   const { participantID } = req.body;
 

@@ -460,12 +460,7 @@
 
     <!-- ── Left: Chat Panel ── -->
     <div class="chat-panel">
-      <div class="chat-panel-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <span>Chat</span>
-        <button id="finish-task-btn" type="button" style="padding:6px 12px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .2s;letter-spacing:normal;text-transform:none;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
-          Finish &amp; Return
-        </button>
-      </div>
+      <div class="chat-panel-header">Chat</div>
 
       <div id="chat2-messages">
         <div class="c2msg bot">
@@ -481,6 +476,29 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
+        </button>
+      </div>
+
+      <div style="padding:14px;border-top:1px solid var(--border);">
+        <p style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:9px;text-transform:uppercase;letter-spacing:.05em;">Final Decision</p>
+
+        <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;">Your recommendation</label>
+        <select id="decision-choice" style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;color:var(--text);background:#fff;margin-bottom:9px;">
+          <option value="">— Select one —</option>
+          <option value="on-campus">On-campus housing</option>
+          <option value="off-campus">Off-campus housing</option>
+          <option value="undecided">Undecided</option>
+        </select>
+
+        <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;">Brief reasoning</label>
+        <textarea id="decision-reasoning" rows="3" placeholder="Explain your choice…" style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;color:var(--text);resize:vertical;margin-bottom:9px;"></textarea>
+
+        <button id="submit-decision-btn" type="button" style="width:100%;padding:8px;background:#34a853;color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;margin-bottom:7px;transition:background .2s;" onmouseover="this.style.background='#2d8f47'" onmouseout="this.style.background='#34a853'">
+          Submit Decision
+        </button>
+
+        <button id="finish-task-btn" type="button" style="width:100%;padding:8px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+          Finish &amp; Return to Workflow
         </button>
       </div>
     </div>
