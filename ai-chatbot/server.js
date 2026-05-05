@@ -365,13 +365,7 @@ app.post('/redirect-to-survey', (req, res) => {
   res.send(surveyUrl);
 });
 
-app.post('/redirect-to-pre-task-survey-1', (req, res) => {
-  const { participantID } = req.body;
-  const baseUrl = 'https://usfca.qualtrics.com/jfe/form/SV_0x3jawuLQJoRk2i';
-  res.send(`${baseUrl}?participantID=${encodeURIComponent(participantID)}`);
-});
-
-app.post('/redirect-to-pre-task-survey-2', (req, res) => {
+app.post('/redirect-to-pre-task-survey', (req, res) => {
   const { participantID } = req.body;
   const baseUrl = 'https://usfca.qualtrics.com/jfe/form/SV_bmEudIfiWr5bk0K';
   res.send(`${baseUrl}?participantID=${encodeURIComponent(participantID)}`);
@@ -379,7 +373,6 @@ app.post('/redirect-to-pre-task-survey-2', (req, res) => {
 
 app.post('/redirect-to-post-task-survey', (req, res) => {
   const { participantID } = req.body;
-  // TODO: Replace with post-task survey URL
-  const baseUrl = 'https://usfca.qualtrics.com/jfe/form/PLACEHOLDER';
+  const baseUrl = 'https://usfca.qualtrics.com/jfe/form/SV_0eR9YjLHmRArvT0';
   res.send(`${baseUrl}?participantID=${encodeURIComponent(participantID)}`);
 });
