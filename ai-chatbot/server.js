@@ -348,13 +348,6 @@ app.get("/documents", async (req, res) => {
   }
 });
 
-connectToMongoDB().finally(() => {
-  app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-  });
-});
-
-
 app.post('/save-decision', async (req, res) => {
   const { participantID, decision, reasoning } = req.body;
 
@@ -372,6 +365,12 @@ app.post('/save-decision', async (req, res) => {
     console.error('Error in /save-decision:', error.message);
     res.status(500).json({ error: 'Unable to save decision.' });
   }
+});
+
+connectToMongoDB().finally(() => {
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+  });
 });
 
 app.post('/redirect-to-survey', (req, res) => {

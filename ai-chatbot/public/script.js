@@ -148,7 +148,10 @@ if (submitDecisionBtn) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ participantID, decision: choice, reasoning }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        return res.json();
+      })
       .then(() => {
         submitDecisionBtn.textContent = "Decision Saved ✓";
         submitDecisionBtn.style.background = "#1e7e34";
