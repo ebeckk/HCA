@@ -36,6 +36,8 @@ async function logEvent(eventType, details = {}) {
 
 const surveyBtn = document.getElementById("survey-btn");
 if (surveyBtn) {
+
+  // Demographics questionnaire 
   function redirectToQualtrics() {
     fetch("/redirect-to-survey", {
       method: "POST",
@@ -55,6 +57,7 @@ if (surveyBtn) {
 
   surveyBtn.addEventListener("click", redirectToQualtrics);
 
+  // Read the task 
   const taskBtn = document.getElementById("task-btn");
   if (taskBtn) {
     taskBtn.addEventListener("click", () => {
@@ -63,32 +66,28 @@ if (surveyBtn) {
     });
   }
 
-  const preTasks = [
-    { id: "pre-task-1-btn", endpoint: "/redirect-to-pre-task-survey-1" },
-    { id: "pre-task-2-btn", endpoint: "/redirect-to-pre-task-survey-2" },
-  ];
-  preTasks.forEach(({ id, endpoint }) => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.addEventListener("click", () => {
-        fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ participantID }),
+  // Pre-task questionnaire 
+  const preTaskBtn = document.getElementById("pre-task-btn");
+  if (preTaskBtn) {
+    preTaskBtn.addEventListener("click", () => {
+      fetch("/redirect-to-pre-task-survey", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantID }),
+      })
+        .then((res) => res.text())
+        .then((url) => {
+          logEvent("redirect", { elementName: "pre-task-btn" });
+          window.location.href = url;
         })
-          .then((res) => res.text())
-          .then((url) => {
-            logEvent("redirect", { elementName: id });
-            window.location.href = url;
-          })
-          .catch((err) => {
-            console.error("Error redirecting to survey:", err);
-            alert("There was an error redirecting to the survey. Please try again.");
-          });
-      });
-    }
-  });
+        .catch((err) => {
+          console.error("Error redirecting to survey:", err);
+          alert("There was an error redirecting to the survey. Please try again.");
+        });
+    });
+  }
 
+  // AI chatbot 
   const prototypeBtn = document.getElementById("prototype-btn");
   if (prototypeBtn) {
     prototypeBtn.addEventListener("click", () => {
@@ -98,6 +97,7 @@ if (surveyBtn) {
     });
   }
 
+  // Post-task questionnaire 
   const postTaskBtn = document.getElementById("post-task-btn");
   if (postTaskBtn) {
     postTaskBtn.addEventListener("click", () => {
@@ -117,6 +117,15 @@ if (surveyBtn) {
         });
     });
   }
+}
+
+// Finish Task button 
+const finishTaskBtn = document.getElementById("finish-task-btn");
+if (finishTaskBtn) {
+  finishTaskBtn.addEventListener("click", () => {
+    logEvent("workflow_step", { elementName: "finish-task-btn" });
+    window.location.href = `/study-workflow.html?participantID=${encodeURIComponent(participantID)}&systemID=${systemID}`;
+  });
 }
 
 const inputField = document.getElementById("user-input");
