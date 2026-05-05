@@ -63,12 +63,58 @@ if (surveyBtn) {
     });
   }
 
+  const preTasks = [
+    { id: "pre-task-1-btn", endpoint: "/redirect-to-pre-task-survey-1" },
+    { id: "pre-task-2-btn", endpoint: "/redirect-to-pre-task-survey-2" },
+  ];
+  preTasks.forEach(({ id, endpoint }) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ participantID }),
+        })
+          .then((res) => res.text())
+          .then((url) => {
+            logEvent("redirect", { elementName: id });
+            window.location.href = url;
+          })
+          .catch((err) => {
+            console.error("Error redirecting to survey:", err);
+            alert("There was an error redirecting to the survey. Please try again.");
+          });
+      });
+    }
+  });
+
   const prototypeBtn = document.getElementById("prototype-btn");
   if (prototypeBtn) {
     prototypeBtn.addEventListener("click", () => {
       logEvent("workflow_step", { elementName: "prototype-btn" });
       const chatPage = systemID === 2 ? "chat2.html" : "chat.html";
       window.location.href = `/${chatPage}?participantID=${encodeURIComponent(participantID)}&systemID=${systemID}`;
+    });
+  }
+
+  const postTaskBtn = document.getElementById("post-task-btn");
+  if (postTaskBtn) {
+    postTaskBtn.addEventListener("click", () => {
+      fetch("/redirect-to-post-task-survey", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantID }),
+      })
+        .then((res) => res.text())
+        .then((url) => {
+          logEvent("redirect", { elementName: "post-task-btn" });
+          window.location.href = url;
+        })
+        .catch((err) => {
+          console.error("Error redirecting to survey:", err);
+          alert("There was an error redirecting to the survey. Please try again.");
+        });
     });
   }
 }

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Task</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1e3a5f;
+      --accent: #1a73e8;
+      --accent-h: #1558c0;
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --border: #dadce0;
+      --text: #202124;
+      --muted: #5f6368;
+      --font: 'Roboto', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .task-card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+      padding: 2.5rem 2rem;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .task-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .task-icon {
+      font-size: 2.8rem;
+      display: block;
+      margin-bottom: 0.75rem;
+    }
+
+    .task-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.4rem;
+    }
+
+    .task-header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .task-body {
+      background: #f8f9fd;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .task-body p {
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .task-body p + p {
+      margin-top: 1rem;
+    }
+
+    .task-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #e8f0fe;
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 2rem;
+      font-size: 0.875rem;
+      color: #1a3c6e;
+      line-height: 1.5;
+    }
+
+    .task-note-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .continue-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .2s;
+      text-align: center;
+    }
+
+    .continue-btn:hover {
+      background: var(--accent-h);
+    }
+  </style>
+</head>
+<body>
+  <div class="task-card">
+    <div class="task-header">
+      <span class="task-icon">📝</span>
+      <h1>Your Task</h1>
+      <p>Please read the following carefully before proceeding.</p>
+    </div>
+
+    <div class="task-body">
+      <p>
+        You must decide between on-campus and off-campus housing while considering how financial aid can offset costs. 
+        The chatbot is given multiple PDF's on housing and financial aid and can be asked to extract key information, compare options, 
+        and present tradeoffs clearly. The goal is for the user to organize this information and help make a clear 
+        recommendation. This task tests whether the system can integrate multiple sources and support real-world decision-making, 
+        rather than just summarizing information.
+      </p>
+    </div>
+
+    <div class="task-note">
+      <span class="task-note-icon"></span>
+      <span>
+        When you are ready, click the button below to return to the study workflow and continue to the next step.
+      </span>
+    </div>
+
+    <button class="continue-btn" id="continue-btn" type="button">
+      Return to Study Workflow
+    </button>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const participantID = params.get("participantID") || localStorage.getItem("participantID") || "";
+      const systemID = params.get("systemID") || "1";
+
+      document.getElementById("continue-btn").addEventListener("click", function () {
+        const base = "/study-workflow.html";
+        const qs = new URLSearchParams({ participantID, systemID }).toString();
+        window.location.href = `${base}?${qs}`;
+      });
+    })();
+  </script>
+</body>
+</html>
