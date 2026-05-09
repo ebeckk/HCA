@@ -373,13 +373,16 @@ connectToMongoDB().finally(() => {
   });
 });
 
+
+app.get('/survey-complete', (req, res) => {
+  const { participantID = '', systemID = '1' } = req.query;
+  res.redirect(`/study-workflow.html?participantID=${encodeURIComponent(participantID)}&systemID=${encodeURIComponent(systemID)}`);
+});
+
 app.post('/redirect-to-survey', (req, res) => {
   const { participantID } = req.body;
-
   const qualtricsBaseUrl = 'https://usfca.qualtrics.com/jfe/form/SV_0x3jawuLQJoRk2i';
-
   const surveyUrl = `${qualtricsBaseUrl}?participantID=${encodeURIComponent(participantID)}`;
-
   res.send(surveyUrl);
 });
 
